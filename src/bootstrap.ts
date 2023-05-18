@@ -10,16 +10,51 @@ function Readonly(writable: boolean) {
   }
 }
 
-function Controller(path: string) {
-  return function (target: Function) {
-    target.prototype.path = path
+function withAuth(isAuth: boolean) {
+  return function (target: any, memberName: string) {
+
   }
 }
 
-@Controller('/users')
+function Controller(path: string, obj: any) {
+  return function (target: Function) {
+    target.prototype.path = path
+    target.prototype.id = obj.data.id;
+    target.prototype.sum = obj.data.sum;
+  }
+}
+
+function Get(path: string) {
+  return function(target: any, propertyKey: string, propertyDescriptor: PropertyDescriptor) {
+    // console.log("the path is", path);
+    console.log(target, propertyKey, propertyDescriptor);
+
+    const actualFunction = function(path: string) {
+      console.log("really injecting path at runtime now", path);
+    }
+
+    propertyDescriptor.value = actualFunction;
+
+    return actualFunction.call(target, path);
+  }
+}
+
+// app.get("/users", (req, res) => {
+//   fetchUsers(req, res);
+// })
+
+@Controller('/users', { data: { id: 123, sum: 900 }})
 class UserController {
   path: string
+  id: number;
+  sum: number;
 
+  @Get("/")
+  fetchUsers(path?: string) {
+    console.log("getting path at runtime from decorator", path)
+  }
+
+  @withAuth(true)
   @Readonly(false)
   userService: any
 
@@ -37,7 +72,8 @@ class UserController {
 }
 
 const ctrl = new UserController()
-// console.log('this is the injected path', ctrl.path)
+ctrl.fetchUsers();
+console.log('this is the injected path', ctrl.path, ctrl.id, ctrl.sum)
 ctrl.mutateUserService()
 
 ctrl.mutateDbService()
